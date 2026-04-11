@@ -13,8 +13,8 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/scan", label: "扫描", icon: <CompassIcon /> },
   { href: "/reading", label: "阅览", icon: <CollectionIcon /> },
+  { href: "/scan", label: "扫描", icon: <CompassIcon /> },
   { href: "/collections", label: "收藏", icon: <StarIcon /> },
 ];
 

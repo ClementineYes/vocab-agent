@@ -48,7 +48,7 @@ export async function POST(req: Request) {
       exampleSentenceEn: `People like to ${word} during weekends.`,
       exampleSentenceZh: `人们周末喜欢${word}。`,
       etymology: "词源：该词常见于日常用法中，含义随语境变化。",
-      weirdMemoryQuote: `不是所有的 ${word} 都会迷失方向。你要做的是把注意力钉住。`,
+      weirdMemoryQuote: `不是所有 ${word} 的人都迷失了方向。`,
     };
     return NextResponse.json({ detail: mock });
   }
@@ -58,25 +58,28 @@ export async function POST(req: Request) {
     baseURL,
   });
 
-  const userPrompt = `请针对单词 ${word} 生成 JSON 数据。`;
+  const userPrompt = `请为英文单词「${word}」生成词卡 JSON（字段名必须完全一致）。`;
 
   const resp = await client.responses.create({
     model: textModel,
-    temperature: 0.4,
+    temperature: 0.45,
     input: [
       {
         role: "system",
         content: [
           {
             type: "input_text",
-            text: `你是一个幽默的英语名师。请针对单词 ${word} 生成 JSON 数据，包含：
+            text: `你是中文母语、熟悉网络梗与影视综艺爆梗的英语学习内容编辑。
 
-phonetic: 音标
-definition: 常用含义
-example: 英文例句
-fun_memory: 诡异记忆法。找一句中文经典台词或名言，将关键词替换为该英文单词。例如：'不是所有 wander 的人都迷失了方向'。
-etymology: 简短词源故事。
-请严格返回 JSON 格式。`,
+针对用户给出的英文单词，请严格返回一个 JSON 对象（不要 markdown，不要多余说明），字段如下：
+
+- phonetic: 该词的 IPA 音标字符串（可含 / /）
+- definition: 完整中文释义（可分段，用 \\n）
+- example: 学习用例句：以中文为主说明用法，可夹带一句简短英文例句辅助记忆
+- memory_sentence: 核心记忆句。要求：联想与该词相关的网络梗、段子、或近年爆火的台词/名言中的一句；把原句里的「一个词」替换成用户这个英文单词（必须恰好出现一次英文单词 ${word}，且全句除该英文词外全部为中文；不要整句英文化）
+- etymology: 简短中文词源故事
+
+只输出 JSON。`,
           },
         ],
       },
@@ -100,9 +103,12 @@ etymology: 简短词源故事。
     phonetic?: string;
     definition?: string;
     example?: string;
+    memory_sentence?: string;
     fun_memory?: string;
     etymology?: string;
   };
+  const memoryLine =
+    parsed.memory_sentence ?? parsed.fun_memory ?? "";
   const detail: WordDetails = {
     id,
     word,
@@ -111,7 +117,7 @@ etymology: 简短词源故事。
     exampleSentenceEn: parsed.example ?? "",
     exampleSentenceZh: "",
     etymology: parsed.etymology ?? "",
-    weirdMemoryQuote: parsed.fun_memory ?? "",
+    weirdMemoryQuote: memoryLine,
   };
 
   return NextResponse.json({ detail });

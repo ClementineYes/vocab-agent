@@ -16,7 +16,7 @@ import { wordToId } from "@/app/lib/slug";
 import { ArrowRightIcon } from "@/app/components/ActionIcons";
 import { StarFilledIcon, StarOutlineIcon } from "@/app/components/ActionIcons";
 import { ChevronDownIcon } from "@/app/components/ActionIcons";
-import type { ScanWord } from "@/app/lib/vibeTypes";
+import type { Collection, ScanWord } from "@/app/lib/vibeTypes";
 
 async function resizeImageToJpegBase64(file: File, maxSide = 1024, quality = 0.82) {
   const objectUrl = URL.createObjectURL(file);
@@ -58,8 +58,10 @@ export default function ScanPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [activeCollectionId, setActiveId] = useState<string>(() => getActiveCollectionId());
-  const [collections, setCollections] = useState(() => getCollections());
+  const [activeCollectionId, setActiveId] = useState<string>("default");
+  const [collections, setCollections] = useState<Collection[]>([
+    { id: "default", name: "默认收藏夹", wordIds: [] },
+  ]);
   // activeCollectionName 暂未在 UI 展示（避免重复查询开销）
 
   const [isScanning, setIsScanning] = useState(false);
@@ -68,6 +70,13 @@ export default function ScanPage() {
   const [error, setError] = useState<string | null>(null);
 
   const onPickClick = () => {
+    if (previewUrl) return;
+    fileInputRef.current?.click();
+  };
+
+  const onReplacePhoto = () => {
+    const confirmed = window.confirm("已上传一张图片，是否上传新照片替换当前图片？");
+    if (!confirmed) return;
     fileInputRef.current?.click();
   };
 
@@ -92,7 +101,15 @@ export default function ScanPage() {
         body: JSON.stringify({ imageBase64: base64, mimeType }),
       });
 
-      const data = (await resp.json()) as { words: ScanWord[] };
+      const data = (await resp.json()) as {
+        words?: ScanWord[];
+        error?: string;
+        detail?: string;
+      };
+      if (!resp.ok) {
+        throw new Error(data.detail || data.error || "后端接口调用失败");
+      }
+
       const normalized = (data.words ?? []).map((w) => ({
         ...w,
         id: w.id || wordToId(w.word),
@@ -135,10 +152,15 @@ export default function ScanPage() {
         })
       );
     } catch (err) {
-      console.error(err);
-      setError("识别失败：请稍后再试。");
+      console.error("scan failed:", err);
+      const message =
+        err instanceof Error ? err.message : "识别失败：请稍后再试。";
+      setError(`识别失败：${message}`);
     } finally {
       setIsScanning(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -238,8 +260,16 @@ export default function ScanPage() {
                 <img
                   src={previewUrl}
                   alt="预览"
-                  className="h-44 w-full object-cover"
+                  className="h-44 w-full cursor-pointer object-cover"
+                  onClick={onReplacePhoto}
                 />
+                <button
+                  type="button"
+                  onClick={onReplacePhoto}
+                  className="w-full border-t border-white/10 bg-white/5 py-2 text-xs font-semibold text-white/70 transition hover:text-white"
+                >
+                  点击图片可更换新照片
+                </button>
               </div>
             ) : null}
 

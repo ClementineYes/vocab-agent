@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   createCollection,
   getActiveCollectionId,
-  getCollectionById,
   getCollections,
   setActiveCollectionId,
 } from "@/app/lib/vibeStore";
@@ -16,20 +15,6 @@ import { ArrowRightIcon } from "@/app/components/ActionIcons";
 type WordBriefMap = Record<string, string>;
 type WordIdToWordMap = Record<string, string>;
 
-function loadWordBriefMap(): WordBriefMap {
-  if (typeof window === "undefined") return {};
-  return JSON.parse(
-    window.localStorage.getItem("vibe_vocab:wordBriefMap") ?? "{}"
-  ) as WordBriefMap;
-}
-
-function loadWordIdToWordMap(): WordIdToWordMap {
-  if (typeof window === "undefined") return {};
-  return JSON.parse(
-    window.localStorage.getItem("vibe_vocab:wordIdToWord") ?? "{}"
-  ) as WordIdToWordMap;
-}
-
 function cx(...classes: Array<string | false | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
@@ -37,15 +22,16 @@ function cx(...classes: Array<string | false | undefined>) {
 export default function CollectionsPage() {
   const router = useRouter();
 
-  const [collections, setCollections] = useState<Collection[]>(() => getCollections());
-  const [activeCollectionId, setActiveId] = useState<string>(() =>
-    getActiveCollectionId()
-  );
+  const [collections, setCollections] = useState<Collection[]>([
+    { id: "default", name: "默认收藏夹", wordIds: [] },
+  ]);
+  const [activeCollectionId, setActiveId] = useState<string>("default");
   const [expandedWordId, setExpandedWordId] = useState<string | null>(null);
-  const [briefMap] = useState<WordBriefMap>(() => loadWordBriefMap());
-  const [wordIdToWord] = useState<WordIdToWordMap>(() => loadWordIdToWordMap());
+  const [briefMap] = useState<WordBriefMap>({});
+  const [wordIdToWord] = useState<WordIdToWordMap>({});
 
-  const activeCollection = getCollectionById(activeCollectionId);
+  const activeCollection =
+    collections.find((c) => c.id === activeCollectionId) ?? null;
 
   const onCreate = () => {
     const name = window.prompt("新建收藏夹名称（例如：旅行词汇）");
